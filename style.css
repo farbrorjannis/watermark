@@ -1,0 +1,41 @@
+body {
+    font-family: sans-serif; /* Choose a suitable font */
+    background-color: #F5F5F0; /* Off-white background */
+    margin: 20px;
+}
+
+h1 {
+    text-align: center;
+    color: #212121; /* Dark brown heading */
+}
+
+#controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between controls */
+    align-items: center; /* Center controls horizontally */
+}
+
+label {
+    color: #D7CCC8; /* Beige color for labels */
+}
+
+select, input[type="range"], input[type="text"] {
+    padding: 5px;
+    border: 1px solid #4E342E; /* Dark brown border */
+    background-color: #F5F5F0; /* Off-white background for inputs */
+    color: #212121; /* Dark brown text */
+}
+
+input[type="range"] { 
+    width: 200px; /* Adjust slider width as needed */
+}
+
+/* Example styling for selected dropdown option */
+select option:checked {
+    background-color: #4E342E; /* Dark brown background for selected option */
+    color: #F5F5F0; /* Off-white text for selected option */
+}
+
+
+
