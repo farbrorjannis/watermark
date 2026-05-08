@@ -1,50 +1,56 @@
-const imageInput = document.getElementById('imageInput');
-const placementSelect = document.getElementById('placement');
-const sizeSlider = document.getElementById('sizeSlider');
-const prominenceSlider = document.getElementById('prominenceSlider');
-const artistNameInput = document.getElementById('artistName');
-const websiteInput = document.getElementById('website');
-const yearInput = document.getElementById('year');
+// ... Existing Code ...
 
-imageInput.addEventListener('change', (event) => {
-    const file = event.target.files[0]; 
-    if (!file.type.match('image.*')) {
-        alert("Please select an image file.");
-        return;
-    }
-    
-    const reader = new FileReader(); 
+
+const downloadBtn = document.getElementById('downloadBtn');
+
+ // ... Event Listener for image Input 
+
+
+ reader.readAsDataURL(file); 
+}); // End event listener
+
+
 
     reader.onload = function(e) {
-        const img = new Image(); // Create a temporary image element
-        img.src = e.target.result; 
-        img.onload = () => {
-            // Canvas Setup & Watermark Drawing (This is where we'll use canvas to draw the watermark)
+        // Create a temporary image element, load the data URL, and wait for it to be fully loaded:
+        const img = new Image();
+        img.src = e.target.result;  
 
+        img.onload = () => { 
+            // Canvas Setup & Watermark Drawing
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d'); 
             canvas.width = img.width;
             canvas.height = img.height;
-            ctx.drawImage(img, 0, 0); // Draw original image onto canvas
+            ctx.drawImage(img, 0, 0);
 
-            // Apply Watermark (adjust position, size, opacity based on user inputs)
-            // ... Your watermark drawing logic here using ctx methods
-
+            // ... Apply Watermark logic (you'll use ctx methods here)  ...
+            
             // Set Alt Text Dynamically
-            let altText = `Copyright © ${yearInput.value} ${artistNameInput.value}`; 
-            if (websiteInput.value) {
-                altText += ` - ${websiteInput.value}`;
-            }
-            img.alt = altText;
 
-            // Display the watermarked image in a preview area (you'll need to add HTML for this)
+            img.alt = altText;   
 
 
-        }; // end img.onload
-    }; // end reader.onload
+            // Display Preview and Add Download Functionality:
 
-    reader.readAsDataURL(file); 
-});
+            const previewDiv = document.getElementById('preview');
+            previewDiv.innerHTML = ''; // Clear any existing content in the preview div 
+            previewDiv.appendChild(canvas); // Add the canvas to the preview area  
+            downloadBtn.addEventListener('click', () => {
+                // Create a link element and set its download attribute
+                const link = document.createElement('a');
+                link.download = 'watermarked_image.png'; // Set the desired filename
+
+                // Generate data URL for the canvas image 
+                link.href = canvas.toDataURL();  // Converts the canvas to a data URL
+                link.click(); // Trigger a click event on the link, initiating the download
+
+            });
+
+
+        };
+    };
+
 
 
 
