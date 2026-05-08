@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Watermark Tool — akvarellskiss.se</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Lato:wght@300;400;700&family=Courier+Prime&family=Dancing+Script:wght@500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+<style>
+  :root {
+    --bg:        #F5F5F0;
+    --accent:    #D7CCC8;
+    --dark:      #4E342E;
+    --dark-soft: #6D4C41;
+    --text:      #3E2723;
+    --text-soft: #795548;
+    --white:     #FDFCFA;
+    --shadow:    rgba(78,52,46,0.12);
+    --radius:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 0 0 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--dark);
+    color: var(--bg);
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  header span {
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ── Layout ── */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 18px 0;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+  .card + .card { margin-top: 18px; }
+
+  .section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 1.8px;
+    color: var(--text-soft);
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--accent);
+    padding-bottom: 7px;
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--dark); background: #EDE8E3; }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+  .upload-zone p { font-size: 0.85rem; color: var(--text-soft); line-height: 1.5; }
+  .upload-zone strong { color: var(--dark); }
+
+  /* ── Form elements ── */
+  label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-soft);
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  input[type=text], input[type=number] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus, input[type=number]:focus { border-color: var(--dark); }
+
+  /* ── Checkboxes ── */
+  .checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    margin-top: 4px;
+  }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .check-item input[type=checkbox] {
+    width: 15px; height: 15px;
+    accent-color: var(--dark);
+    cursor: pointer;
+  }
+
+  /* ── Sliders ── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--accent);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--dark);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .slider-val {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* ── Placement grid ── */
+  .placement-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 5px;
+    width: 120px;
+    height: 90px;
+    margin-top: 6px;
+  }
+  .p-btn {
+    border: none;
+    border-radius: 5px;
+    background: var(--accent);
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    font-size: 0.6rem;
+    color: var(--text-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .p-btn:hover { background: #C4B5B0; }
+  .p-btn.active { background: var(--dark); color: var(--bg); }
+  .p-btn.spacer { background: transparent; cursor: default; }
+
+  /* ── Font selector ── */
+  .font-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .font-opt {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1.5px solid var(--accent);
+    background: var(--bg);
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text);
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .font-opt:hover { border-color: var(--dark-soft); }
+  .font-opt.active { border-color: var(--dark); background: #EDE8E3; }
+
+  /* ── Watermark string preview ── */
+  .wm-preview {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 0.82rem;
+    color: var(--text-soft);
+    border: 1px solid var(--accent);
+    min-height: 34px;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+  .wm-preview em { color: var(--dark); font-style: normal; font-weight: 700; }
+
+  /* ── Canvas / preview ── */
+  .preview-wrap {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--accent);
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .preview-wrap canvas {
+    display: block;
+    max-width: 100%;
+    border-radius: var(--radius);
+  }
+  .no-image {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    padding: 40px;
+    text-align: center;
+  }
+
+  /* ── Download button ── */
+  .dl-btn {
+    display: block;
+    width: 100%;
+    margin-top: 16px;
+    padding: 13px;
+    background: var(--dark);
+    color: var(--bg);
+    font-family: 'Lato', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .dl-btn:hover { background: var(--dark-soft); }
+  .dl-btn:active { transform: scale(0.98); }
+  .dl-btn:disabled { background: var(--accent); color: var(--text-soft); cursor: default; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-soft);
+    letter-spacing: 0.5px;
+  }
+  footer a { color: var(--dark); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── Alt text note ── */
+  .alt-note {
+    font-size: 0.75rem;
+    color: var(--text-soft);
+    margin-top: 8px;
+    line-height: 1.5;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Watermark Tool</h1>
+  <span>akvarellskiss.se</span>
+</header>
+
+<div class="container">
+
+  <!-- ── LEFT PANEL ── -->
+  <div>
+
+    <!-- Upload -->
+    <div class="card">
+      <div class="section-label">1. Upload Image</div>
+      <div class="upload-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" />
+        <div class="upload-icon">🖼</div>
+        <p><strong>Click to upload</strong> or drag & drop<br/>JPG, PNG, WEBP — any image</p>
+      </div>
+    </div>
+
+    <!-- Artist Info -->
+    <div class="card">
+      <div class="section-label">2. Artist Information</div>
+      <label for="artistName">Artist Name</label>
+      <input type="text" id="artistName" placeholder="e.g. Anna Lindström" />
+      <label for="artistUrl">Website URL (optional)</label>
+      <input type="text" id="artistUrl" placeholder="e.g. www.akvarellskiss.se" />
+      <label for="copyYear">Copyright Year</label>
+      <input type="number" id="copyYear" value="" style="width:120px" />
+    </div>
+
+    <!-- Watermark String Builder -->
+    <div class="card">
+      <div class="section-label">3. Watermark Text</div>
+      <div class="checks">
+        <label class="check-item"><input type="checkbox" id="chkCopy" checked /> © symbol</label>
+        <label class="check-item"><input type="checkbox" id="chkYear" checked /> Year</label>
+        <label class="check-item"><input type="checkbox" id="chkName" checked /> Name</label>
+        <label class="check-item"><input type="checkbox" id="chkUrl"  checked /> URL</label>
+      </div>
+      <label for="separator">Separator character</label>
+      <input type="text" id="separator" value=" | " style="width:80px" maxlength="5" />
+      <div class="wm-preview" id="wmPreview">—</div>
+    </div>
+
+    <!-- Font -->
+    <div class="card">
+      <div class="section-label">4. Watermark Font</div>
+      <div class="font-grid" id="fontGrid">
+        <button class="font-opt active" data-font="'Playfair Display', serif"     style="font-family:'Playfair Display',serif">Playfair Display — elegant serif</button>
+        <button class="font-opt"        data-font="'Cormorant Garamond', serif"   style="font-family:'Cormorant Garamond',serif">Cormorant Garamond — refined classic</button>
+        <button class="font-opt"        data-font="'Dancing Script', cursive"     style="font-family:'Dancing Script',cursive">Dancing Script — handwritten</button>
+        <button class="font-opt"        data-font="'Courier Prime', monospace"    style="font-family:'Courier Prime',monospace">Courier Prime — typewriter</button>
+        <button class="font-opt"        data-font="'Lato', sans-serif"            style="font-family:'Lato',sans-serif">Lato — clean sans-serif</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div>
+
+    <!-- Placement & controls -->
+    <div class="card">
+      <div class="section-label">5. Placement & Style</div>
+
+      <label>Position</label>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div class="placement-grid" id="placementGrid">
+          <button class="p-btn active" data-pos="tl" title="Top Left">↖</button>
+          <div class="p-btn spacer"></div>
+          <button class="p-btn" data-pos="tr" title="Top Right">↗</button>
+          <div class="p-btn spacer"></div>
+          <button class="p-btn" data-pos="c"  title="Center">✛</button>
+          <div class="p-btn spacer"></div>
+          <button class="p-btn" data-pos="bl" title="Bottom Left">↙</button>
+          <div class="p-btn spacer"></div>
+          <button class="p-btn" data-pos="br" title="Bottom Right">↘</button>
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-soft);line-height:1.7">
+          Click a corner<br/>or center
+        </div>
+      </div>
+
+      <label>Font Size <span style="font-size:0.72rem">(px on image)</span></label>
+      <div class="slider-row">
+        <input type="range" id="sizeSlider" min="10" max="120" value="28" />
+        <span class="slider-val" id="sizeVal">28px</span>
+      </div>
+
+      <label>Prominence <span style="font-size:0.72rem">(opacity)</span></label>
+      <div class="slider-row">
+        <input type="range" id="opacitySlider" min="3" max="80" value="18" />
+        <span class="slider-val" id="opacityVal">18%</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-soft);margin-top:3px">
+        <span>Subtle deterrent</span><span>Bold branding</span>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="card" style="margin-top:18px">
+      <div class="section-label">6. Preview</div>
+      <div class="preview-wrap" id="previewWrap">
+        <div class="no-image" id="noImageMsg">Upload an image to see the preview here.</div>
+        <canvas id="canvas" style="display:none"></canvas>
+      </div>
+      <p class="alt-note" id="altNote"></p>
+      <button class="dl-btn" id="dlBtn" disabled>Download Watermarked JPG</button>
+    </div>
+
+    <footer>
+      Built for artists by <a href="https://www.akvarellskiss.se" target="_blank">www.akvarellskiss.se</a>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+// ── State ──
+const state = {
+  image: null,         // HTMLImageElement
+  font: "'Playfair Display', serif",
+  position: 'tl',
+  size: 28,
+  opacity: 0.18,
+};
+
+// ── Element refs ──
+const fileInput      = document.getElementById('fileInput');
+const dropZone       = document.getElementById('dropZone');
+const artistName     = document.getElementById('artistName');
+const artistUrl      = document.getElementById('artistUrl');
+const copyYear       = document.getElementById('copyYear');
+const chkCopy        = document.getElementById('chkCopy');
+const chkYear        = document.getElementById('chkYear');
+const chkName        = document.getElementById('chkName');
+const chkUrl         = document.getElementById('chkUrl');
+const separator      = document.getElementById('separator');
+const wmPreview      = document.getElementById('wmPreview');
+const fontGrid       = document.getElementById('fontGrid');
+const placementGrid  = document.getElementById('placementGrid');
+const sizeSlider     = document.getElementById('sizeSlider');
+const sizeVal        = document.getElementById('sizeVal');
+const opacitySlider  = document.getElementById('opacitySlider');
+const opacityVal     = document.getElementById('opacityVal');
+const canvas         = document.getElementById('canvas');
+const ctx            = canvas.getContext('2d');
+const previewWrap    = document.getElementById('previewWrap');
+const noImageMsg     = document.getElementById('noImageMsg');
+const dlBtn          = document.getElementById('dlBtn');
+const altNote        = document.getElementById('altNote');
+
+// ── Init year ──
+copyYear.value = new Date().getFullYear();
+
+// ── Build watermark string ──
+function buildWatermarkText() {
+  const sep  = separator.value || ' | ';
+  const parts = [];
+  let copy = '';
+  if (chkCopy.checked) copy += '©';
+  if (chkYear.checked) copy += (copy ? ' ' : '') + copyYear.value;
+  if (copy) parts.push(copy);
+  if (chkName.checked && artistName.value.trim()) parts.push(artistName.value.trim());
+  if (chkUrl.checked  && artistUrl.value.trim())  parts.push(artistUrl.value.trim());
+  return parts.join(sep);
+}
+
+function updateWmPreview() {
+  const txt = buildWatermarkText();
+  wmPreview.textContent = txt || '(nothing selected)';
+  renderCanvas();
+}
+
+// ── Upload ──
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+function loadFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      state.image = img;
+      noImageMsg.style.display = 'none';
+      canvas.style.display = 'block';
+      dlBtn.disabled = false;
+      renderCanvas();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Font selection ──
+fontGrid.querySelectorAll('.font-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    fontGrid.querySelectorAll('.font-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.font = btn.dataset.font;
+    renderCanvas();
+  });
+});
+
+// ── Placement ──
+placementGrid.querySelectorAll('.p-btn[data-pos]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    placementGrid.querySelectorAll('.p-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.position = btn.dataset.pos;
+    renderCanvas();
+  });
+});
+
+// ── Sliders ──
+sizeSlider.addEventListener('input', () => {
+  state.size = +sizeSlider.value;
+  sizeVal.textContent = state.size + 'px';
+  renderCanvas();
+});
+opacitySlider.addEventListener('input', () => {
+  state.opacity = +opacitySlider.value / 100;
+  opacityVal.textContent = opacitySlider.value + '%';
+  renderCanvas();
+});
+
+// ── Live inputs ──
+[artistName, artistUrl, copyYear, separator, chkCopy, chkYear, chkName, chkUrl].forEach(el => {
+  el.addEventListener('input',  updateWmPreview);
+  el.addEventListener('change', updateWmPreview);
+});
+
+// ── Render ──
+function renderCanvas() {
+  if (!state.image) return;
+
+  const img = state.image;
+  canvas.width  = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+
+  ctx.drawImage(img, 0, 0);
+
+  const text    = buildWatermarkText();
+  const fontSize = state.size;
+  ctx.font      = `${fontSize}px ${state.font}`;
+  ctx.globalAlpha = state.opacity;
+
+  const measured = ctx.measureText(text);
+  const tw = measured.width;
+  const th = fontSize;
+  const pad = fontSize * 0.8;
+
+  let x, y, textAlign, baseline;
+  switch (state.position) {
+    case 'tl': x = pad;                   y = pad + th;         textAlign = 'left';   baseline = 'alphabetic'; break;
+    case 'tr': x = img.naturalWidth - pad; y = pad + th;         textAlign = 'right';  baseline = 'alphabetic'; break;
+    case 'bl': x = pad;                   y = img.naturalHeight - pad; textAlign = 'left';   baseline = 'alphabetic'; break;
+    case 'br': x = img.naturalWidth - pad; y = img.naturalHeight - pad; textAlign = 'right';  baseline = 'alphabetic'; break;
+    case 'c':  x = img.naturalWidth / 2;  y = img.naturalHeight / 2;   textAlign = 'center'; baseline = 'middle';     break;
+  }
+
+  ctx.textAlign    = textAlign;
+  ctx.textBaseline = baseline;
+
+  // Soft shadow for legibility on any background
+  ctx.shadowColor   = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur    = fontSize * 0.4;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Draw white text (blends on most images)
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillText(text, x, y);
+
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur  = 0;
+
+  // Update alt text note
+  const altText = buildAltText();
+  altNote.textContent = 'Alt text: "' + altText + '"';
+
+  // Scale canvas preview to container width
+  const maxW = previewWrap.offsetWidth;
+  if (canvas.width > maxW) {
+    canvas.style.width  = '100%';
+    canvas.style.height = 'auto';
+  } else {
+    canvas.style.width  = '';
+    canvas.style.height = '';
+  }
+}
+
+function buildAltText() {
+  const name = artistName.value.trim();
+  const url  = artistUrl.value.trim();
+  const year = copyYear.value;
+  let alt = 'Artwork';
+  if (name) alt += ` by ${name}`;
+  if (year) alt += `. © ${year}`;
+  if (name) alt += ` ${name}`;
+  if (url)  alt += ` — ${url}`;
+  alt += '. All rights reserved.';
+  return alt;
+}
+
+// ── Download with EXIF (manual JPEG rebuild) ──
+dlBtn.addEventListener('click', () => {
+  if (!state.image) return;
+
+  const name = artistName.value.trim() || 'Unknown Artist';
+  const url  = artistUrl.value.trim();
+  const year = copyYear.value;
+  const copy = `© ${year} ${name}${url ? ' — ' + url : ''}. All rights reserved.`;
+  const desc = buildAltText();
+
+  // 1. Get canvas as raw JPEG bytes (base64 → Uint8Array)
+  const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const jpegBase64  = jpegDataUrl.split(',')[1];
+  const jpegBinary  = atob(jpegBase64);
+  const jpegBytes   = new Uint8Array(jpegBinary.length);
+  for (let i = 0; i < jpegBinary.length; i++) jpegBytes[i] = jpegBinary.charCodeAt(i);
+
+  // 2. Build EXIF object
+  const exifObj = {
+    "0th": {
+      [piexif.ImageIFD.Artist]:           name,
+      [piexif.ImageIFD.Copyright]:        copy,
+      [piexif.ImageIFD.ImageDescription]: desc,
+      [piexif.ImageIFD.Software]:         'akvarellskiss.se Watermark Tool',
+      [piexif.ImageIFD.XResolution]:      [72, 1],
+      [piexif.ImageIFD.YResolution]:      [72, 1],
+    },
+    "Exif": {},
+    "GPS":  {}
+  };
+
+  // 3. Dump EXIF to binary string, then to Uint8Array
+  const exifStr   = piexif.dump(exifObj);         // binary string
+  const exifBytes = new Uint8Array(exifStr.length);
+  for (let i = 0; i < exifStr.length; i++) exifBytes[i] = exifStr.charCodeAt(i);
+
+  // 4. Build APP1 marker segment: FF E1 + length (2 bytes) + exif bytes
+  //    Length field = 2 (length field itself) + exifBytes.length
+  const app1Length = 2 + exifBytes.length;
+  const app1 = new Uint8Array(2 + 2 + exifBytes.length);
+  app1[0] = 0xFF; app1[1] = 0xE1;            // APP1 marker
+  app1[2] = (app1Length >> 8) & 0xFF;         // length high byte
+  app1[3] = app1Length & 0xFF;                // length low byte
+  app1.set(exifBytes, 4);                     // EXIF data
+
+  // 5. Splice: SOI (2 bytes) + APP1 + rest of JPEG (skip original SOI)
+  //    Canvas JPEGs start with FF D8 (SOI). We keep SOI, inject APP1, then append body.
+  const soi      = jpegBytes.slice(0, 2);     // FF D8
+  const jpegBody = jpegBytes.slice(2);         // everything after SOI
+
+  const result = new Uint8Array(soi.length + app1.length + jpegBody.length);
+  result.set(soi,      0);
+  result.set(app1,     soi.length);
+  result.set(jpegBody, soi.length + app1.length);
+
+  // 6. Create blob and trigger download
+  const blob     = new Blob([result], { type: 'image/jpeg' });
+  const blobUrl  = URL.createObjectURL(blob);
+  const link     = document.createElement('a');
+  link.href      = blobUrl;
+  link.download  = (name.replace(/\s+/g, '_')) + '_watermarked.jpg';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+});
+</script>
+</body>
+</html>
