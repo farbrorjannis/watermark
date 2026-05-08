@@ -413,6 +413,14 @@
         <span>Subtle deterrent</span><span>Bold branding</span>
       </div>
     </div>
+    <label>Text Colour</label>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+  <button class="p-btn active" id="colorAuto"  data-color="auto"    style="width:auto;padding:4px 10px;font-size:0.75rem">Auto</button>
+  <button class="p-btn"        id="colorWhite" data-color="#FFFFFF"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#fff;color:#333;border:1px solid #ccc">White</button>
+  <button class="p-btn"        id="colorBlack" data-color="#000000"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#111;color:#eee">Black</button>
+  <button class="p-btn"        id="colorGold"  data-color="#C9A84C"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#C9A84C;color:#fff">Gold</button>
+  <input type="color" id="colorPicker" value="#FFFFFF" title="Custom colour" style="width:34px;height:34px;border:none;background:none;cursor:pointer;padding:0" />
+</div>
 
     <!-- Preview -->
     <div class="card" style="margin-top:18px">
@@ -651,7 +659,23 @@ function buildAltText() {
   alt += '. All rights reserved.';
   return alt;
 }
+// ── Watermark colour ──
+state.wmColor = 'auto';
 
+document.querySelectorAll('[data-color]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.wmColor = btn.dataset.color;
+    renderCanvas();
+  });
+});
+
+document.getElementById('colorPicker').addEventListener('input', e => {
+  document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+  state.wmColor = e.target.value;
+  renderCanvas();
+});
 // ── Download with EXIF (manual JPEG rebuild) ──
 dlBtn.addEventListener('click', () => {
   if (!state.image) return;
