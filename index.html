@@ -452,6 +452,14 @@
           Click a corner<br/>or center
         </div>
       </div>
+      <label>Text Colour</label>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+  <button class="p-btn active" id="colorAuto"  data-color="auto"    style="width:auto;padding:4px 10px;font-size:0.75rem">Auto</button>
+  <button class="p-btn"        id="colorWhite" data-color="#FFFFFF"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#fff;color:#333;border:1px solid #ccc">White</button>
+  <button class="p-btn"        id="colorBlack" data-color="#000000"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#111;color:#eee">Black</button>
+  <button class="p-btn"        id="colorGold"  data-color="#C9A84C"  style="width:auto;padding:4px 10px;font-size:0.75rem;background:#C9A84C;color:#fff">Gold</button>
+  <input type="color" id="colorPicker" value="#FFFFFF" title="Custom colour" style="width:34px;height:34px;border:none;background:none;cursor:pointer;padding:0" />
+</div>
 
       <label>Font Size <span style="font-size:0.72rem">(px on image)</span></label>
       <div class="slider-row">
@@ -619,57 +627,83 @@ function renderCanvas() {
   const img = state.image;
   canvas.width  = img.naturalWidth;
   canvas.height = img.naturalHeight;
-
   ctx.drawImage(img, 0, 0);
 
-  const text    = buildWatermarkText();
+  const text     = buildWatermarkText();
   const fontSize = state.size;
-  ctx.font      = `${fontSize}px ${state.font}`;
-  ctx.globalAlpha = state.opacity;
+  ctx.font       = `${fontSize}px ${state.font}`;
 
-  const measured = ctx.measureText(text);
-  const tw = measured.width;
-  const th = fontSize;
   const pad = fontSize * 0.8;
-
   let x, y, textAlign, baseline;
   switch (state.position) {
-    case 'tl': x = pad;                   y = pad + th;         textAlign = 'left';   baseline = 'alphabetic'; break;
-    case 'tr': x = img.naturalWidth - pad; y = pad + th;         textAlign = 'right';  baseline = 'alphabetic'; break;
-    case 'bl': x = pad;                   y = img.naturalHeight - pad; textAlign = 'left';   baseline = 'alphabetic'; break;
+    case 'tl': x = pad;                    y = pad + fontSize;          textAlign = 'left';   baseline = 'alphabetic'; break;
+    case 'tr': x = img.naturalWidth - pad; y = pad + fontSize;          textAlign = 'right';  baseline = 'alphabetic'; break;
+    case 'bl': x = pad;                    y = img.naturalHeight - pad; textAlign = 'left';   baseline = 'alphabetic'; break;
     case 'br': x = img.naturalWidth - pad; y = img.naturalHeight - pad; textAlign = 'right';  baseline = 'alphabetic'; break;
-    case 'c':  x = img.naturalWidth / 2;  y = img.naturalHeight / 2;   textAlign = 'center'; baseline = 'middle';     break;
+    case 'c':  x = img.naturalWidth / 2;   y = img.naturalHeight / 2;   textAlign = 'center'; baseline = 'middle';     break;
   }
 
+  // ── Determine text color ──
+  let textColor = state.wmColor; // manual pick or 'auto'
+
+  if (textColor === 'auto') {
+    // Sample the region behind the watermark text
+    const measured = ctx.measureText(text);
+    const tw = measured.width;
+    const th = fontSize;
+
+    let sx, sy;
+    switch (state.position) {
+      case 'tl': sx = pad;                              sy = pad;                              break;
+      case 'tr': sx = img.naturalWidth - pad - tw;      sy = pad;                              break;
+      case 'bl': sx = pad;                              sy = img.naturalHeight - pad - th;     break;
+      case 'br': sx = img.naturalWidth - pad - tw;      sy = img.naturalHeight - pad - th;     break;
+      case 'c':  sx = img.naturalWidth/2 - tw/2;        sy = img.naturalHeight/2 - th/2;       break;
+    }
+
+    // Clamp to canvas bounds
+    sx = Math.max(0, Math.min(sx, img.naturalWidth  - 1));
+    sy = Math.max(0, Math.min(sy, img.naturalHeight - 1));
+    const sw = Math.min(tw, img.naturalWidth  - sx);
+    const sh = Math.min(th, img.naturalHeight - sy);
+
+    if (sw > 0 && sh > 0) {
+      const pixels = ctx.getImageData(sx, sy, sw, sh).data;
+      let total = 0, count = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        // Perceived luminance (ITU-R BT.709)
+        total += 0.2126 * pixels[i] + 0.7152 * pixels[i+1] + 0.0722 * pixels[i+2];
+        count++;
+      }
+      const avgLuminance = total / count; // 0–255
+      textColor = avgLuminance > 128 ? '#000000' : '#FFFFFF';
+    } else {
+      textColor = '#FFFFFF';
+    }
+  }
+
+  ctx.globalAlpha  = state.opacity;
   ctx.textAlign    = textAlign;
   ctx.textBaseline = baseline;
 
-  // Soft shadow for legibility on any background
-  ctx.shadowColor   = 'rgba(0,0,0,0.25)';
+  // Shadow for extra legibility
+  ctx.shadowColor   = textColor === '#FFFFFF' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.35)';
   ctx.shadowBlur    = fontSize * 0.4;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
 
-  // Draw white text (blends on most images)
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = textColor;
   ctx.fillText(text, x, y);
 
   ctx.globalAlpha = 1;
   ctx.shadowBlur  = 0;
 
-  // Update alt text note
-  const altText = buildAltText();
-  altNote.textContent = 'Alt text: "' + altText + '"';
+  // Alt text note
+  altNote.textContent = 'Alt text: "' + buildAltText() + '"';
 
-  // Scale canvas preview to container width
   const maxW = previewWrap.offsetWidth;
-  if (canvas.width > maxW) {
-    canvas.style.width  = '100%';
-    canvas.style.height = 'auto';
-  } else {
-    canvas.style.width  = '';
-    canvas.style.height = '';
-  }
+  canvas.style.width  = canvas.width > maxW ? '100%' : '';
+  canvas.style.height = canvas.width > maxW ? 'auto' : '';
 }
 
 function buildAltText() {
@@ -684,7 +718,23 @@ function buildAltText() {
   alt += '. All rights reserved.';
   return alt;
 }
+// ── Watermark colour ──
+state.wmColor = 'auto';
 
+document.querySelectorAll('[data-color]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.wmColor = btn.dataset.color;
+    renderCanvas();
+  });
+});
+
+document.getElementById('colorPicker').addEventListener('input', e => {
+  document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+  state.wmColor = e.target.value;
+  renderCanvas();
+});
 // ── Download with EXIF (manual JPEG rebuild) ──
 dlBtn.addEventListener('click', () => {
   if (!state.image) return;
